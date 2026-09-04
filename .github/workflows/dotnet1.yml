@@ -1,0 +1,89 @@
+name: Raceday Database CI
+
+on:
+push:
+branches:
+- main
+- develop
+
+pull_request:
+branches:
+- main
+- develop
+
+jobs:
+database-test:
+name: Test Raceday Database
+runs-on: ubuntu-latest
+
+services:
+sqlserver:
+image: mcr.microsoft.com/mssql/server:2022-latest
+env:
+ACCEPT_EULA: Y
+MSSQL_SA_PASSWORD: "Raceday@12345"
+ports:
+- 1433:1433
+options: >-
+--health-cmd " /opt/mssql-tools18/bin/sqlcmd
+-S localhost
+-U sa
+-P 'Raceday@12345'
+-C
+-Q 'SELECT 1' "
+--health-interval 10s
+--health-timeout 5s
+--health-retries 10
+
+steps:
+
+- name: Checkout Repository
+uses: actions/checkout@v4
+
+- name: Wait for SQL Server
+run: |
+echo "Waiting for SQL Server..."
+sleep 20
+
+- name: Create Raceday Database
+run: |
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-Q "CREATE DATABASE RacedayDB"
+
+- name: Run Database Schema
+run: |
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RacedayDB \
+-i database/schema.sql
+
+- name: Insert Test Data
+run: |
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RacedayDB \
+-i database/data.sql
+
+- name: Run SQL Queries
+run: |
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RacedayDB \
+-i database/queries.sql
+
+- name: Database Test Successful
+run: |
+echo "Raceday database workflow completed successfully."
