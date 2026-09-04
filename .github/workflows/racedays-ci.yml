@@ -4,7 +4,6 @@ on:
 push:
 branches:
 - master
-
 pull_request:
 branches:
 - master
@@ -18,25 +17,21 @@ services:
 sqlserver:
 image: mcr.microsoft.com/mssql/server:2022-latest
 env:
-ACCEPT_EULA: Y
+ACCEPT_EULA: "Y"
 MSSQL_SA_PASSWORD: "Raceday@12345"
 ports:
 - 1433:1433
-options: >-
---health-cmd "/opt/mssql-tools18/bin/sqlcmd
--S localhost
--U sa
--P 'Raceday@12345'
--C
--Q 'SELECT 1'"
---health-interval 10s
---health-timeout 5s
---health-retries 20
 
 steps:
-
 - name: Checkout Repository
 uses: actions/checkout@v4
+
+- name: Install SQLCMD
+run: |
+curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+curl https://packages.microsoft.com/config/ubuntu/24.04/prod.list | sudo tee /etc/apt/sources.list.d/msprod.list
+sudo apt-get update
+sudo ACCEPT_EULA=Y apt-get install -y mssql-tools18 unixodbc-dev
 
 - name: Wait for SQL Server
 run: |
@@ -44,9 +39,8 @@ echo "Waiting for SQL Server..."
 
 for i in {1..30}
 do
-if docker exec $(docker ps -q --filter ancestor=mcr.microsoft.com/mssql/server:2022-latest) \
-/opt/mssql-tools18/bin/sqlcmd \
--S localhost \
+if /opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
 -U sa \
 -P 'Raceday@12345' \
 -C \
@@ -62,107 +56,157 @@ done
 
 - name: Create RaceWays Database
 run: |
-docker exec $(docker ps -q --filter ancestor=mcr.microsoft.com/mssql/server:2022-latest) \
 /opt/mssql-tools18/bin/sqlcmd \
--S localhost \
+-S localhost,1433 \
 -U sa \
 -P 'Raceday@12345' \
 -C \
--i "/dev/stdin" <<'SQL'
-IF DB_ID('RaceWays') IS NULL
-BEGIN
-CREATE DATABASE RaceWays;
-END
-SQL
-
-- name: Run Database Creation Script
-run: |
-docker exec \
--i $(docker ps -q --filter ancestor=mcr.microsoft.com/mssql/server:2022-latest) \
-/opt/mssql-tools18/bin/sqlcmd \
--S localhost \
--U sa \
--P 'Raceday@12345' \
--C \
--i "/dev/stdin" < "database/creating RaceWays database.sql"
+-Q "IF DB_ID('RaceWays') IS NULL CREATE DATABASE RaceWays"
 
 - name: Create Tables
 run: |
-for file in \
-"database/creating table.sql" \
-"database/creating categories table.sql" \
-"database/creating events table.sql" \
-"database/creating event categories table.sql" \
-"database/creating user_events table.sql" \
-"database/creating routes table.sql" \
-"database/creating weather information table.sql" \
-"database/creating results table.sql"
-do
-echo "Running $file"
-
-docker exec \
--i $(docker ps -q --filter ancestor=mcr.microsoft.com/mssql/server:2022-latest) \
 /opt/mssql-tools18/bin/sqlcmd \
--S localhost \
+-S localhost,1433 \
 -U sa \
 -P 'Raceday@12345' \
 -C \
 -d RaceWays \
--i "/dev/stdin" < "$file"
-done
+-i "database/creating table.sql"
+
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RaceWays \
+-i "database/creating categories table.sql"
+
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RaceWays \
+-i "database/creating events table.sql"
+
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RaceWays \
+-i "database/creating event categories table.sql"
+
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RaceWays \
+-i "database/creating user_events table.sql"
+
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RaceWays \
+-i "database/creating routes table.sql"
+
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RaceWays \
+-i "database/creating weather information table.sql"
+
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RaceWays \
+-i "database/creating results table.sql"
 
 - name: Insert Data
 run: |
-for file in \
-"database/inserting values.sql" \
-"database/inserting values 2.sql" \
-"database/inserting values 3.sql" \
-"database/inserting values 4.sql" \
-"database/inserting values 5.sql" \
-"database/inserting values 6.sql" \
-"database/inserting values 7.sql"
-do
-echo "Running $file"
-
-docker exec \
--i $(docker ps -q --filter ancestor=mcr.microsoft.com/mssql/server:2022-latest) \
 /opt/mssql-tools18/bin/sqlcmd \
--S localhost \
+-S localhost,1433 \
 -U sa \
 -P 'Raceday@12345' \
 -C \
 -d RaceWays \
--i "/dev/stdin" < "$file"
-done
+-i "database/inserting values.sql"
+
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RaceWays \
+-i "database/inserting values 2.sql"
+
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RaceWays \
+-i "database/inserting values 3.sql"
+
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RaceWays \
+-i "database/inserting values 4.sql"
+
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RaceWays \
+-i "database/inserting values 5.sql"
+
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RaceWays \
+-i "database/inserting values 6.sql"
+
+/opt/mssql-tools18/bin/sqlcmd \
+-S localhost,1433 \
+-U sa \
+-P 'Raceday@12345' \
+-C \
+-d RaceWays \
+-i "database/inserting values 7.sql"
 
 - name: Test Database
 run: |
-docker exec \
--i $(docker ps -q --filter ancestor=mcr.microsoft.com/mssql/server:2022-latest) \
 /opt/mssql-tools18/bin/sqlcmd \
--S localhost \
+-S localhost,1433 \
 -U sa \
 -P 'Raceday@12345' \
 -C \
 -d RaceWays \
--i "/dev/stdin" < "database/Testing Databases.sql"
+-i "database/Testing Databases.sql"
 
 - name: Test Tables
 run: |
-docker exec \
--i $(docker ps -q --filter ancestor=mcr.microsoft.com/mssql/server:2022-latest) \
 /opt/mssql-tools18/bin/sqlcmd \
--S localhost \
+-S localhost,1433 \
 -U sa \
 -P 'Raceday@12345' \
 -C \
 -d RaceWays \
--i "/dev/stdin" < "database/Testing the Tables.sql"
+-i "database/Testing the Tables.sql"
 
 - name: Database Test Successful
 run: |
-echo "=========================================="
-echo "Raceday Database CI completed successfully"
-echo "Database: RaceWays"
-echo "Branch: master"
-echo "=========================================="
+echo "Raceday Database CI completed successfully."
