@@ -1,0 +1,21 @@
+CREATE TABLE ENROLLMENTS
+(
+    EnrollmentID INT IDENTITY(1,1) NOT NULL,
+    UserID INT NOT NULL,
+    EventCategoryID INT NOT NULL,
+    EnrollmentDate DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+    Status NVARCHAR(30) NOT NULL DEFAULT 'Registered',
+
+    CONSTRAINT PK_ENROLLMENTS
+        PRIMARY KEY (EnrollmentID),
+
+    CONSTRAINT UQ_ENROLLMENTS_User_EventCategory
+        UNIQUE (UserID, EventCategoryID),
+
+    CONSTRAINT FK_ENROLLMENTS_User
+        FOREIGN KEY (UserID) REFERENCES USERS(UserID),
+
+    CONSTRAINT FK_ENROLLMENTS_EventCategory
+        FOREIGN KEY (EventCategoryID)
+        REFERENCES EVENT_CATEGORIES(EventCategoryID)
+);
